@@ -1,0 +1,348 @@
+<html>
+	<head>
+        <script src="https://code.jquery.com/jquery-latest.min.js"></script>
+
+		<link rel="stylesheet" href="treant/Treant.css" type="text/css"/>
+
+		<style>
+			#tree-simple{
+				background-color: black;
+			}
+
+			p{
+				color: white;
+			}
+
+			.cmd{
+				position: absolute;
+				z-index: 100;
+				top: 20px;
+				left: 800px;
+			}
+
+			.op{
+				position: absolute;
+				z-index: 100;
+				top: 20px;
+				left: 900px;
+			}
+
+			div[id^='node-']{
+				cursor: crosshair;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="cmd"><p>START</p></div>
+		<div class="op"><p></p></div>		
+
+		<div id="tree-simple"></div>
+	
+		<script src="treant/vendor/raphael.js"></script>
+	    <script src="treant/Treant.js"></script>
+
+		<script>
+			var nodes = {
+                text: {name: "OAK-TREE"},
+				onClick: function(){
+				},
+                children: [{
+                    text: {name: "COMMANDS"},
+                    children: [{
+                        text: {name: "REPLACE"},
+						onClick: _onClickCOMMAND,
+                        children: [{
+                            text: {name: "EVALUATE"},
+                            children: [{
+                                text: {name: 'KEYBOARD'},
+                                children: [{
+                                    text: {name: 'STORE'},
+                                    children: [{
+                                        text: {name: 'ADD-RT'},
+										onClick: _onClickCOMMAND, 
+                                        children: [{
+                                            text: {name: 'ERASE'},
+											onClick: _onClickCOMMAND
+                                        }]
+                                    }]
+                                }]
+                            }]
+                        	}]
+                    }]
+                },{
+                    text: {name: "CLASS"},
+                    children: [{
+                        text: {name: "ARITH2"},
+						onClick: function(){
+							nodes.children[2] = buildOpTree(_arith_ops_branch);
+							renderTree();
+						},
+                        children: [{
+                            text: {name: "LOGIC2"},
+                            children: [{
+                                text: {name: "NAMES2"},
+                                children: [{
+                                    text: {name: 'NUMBERS'},
+									onClick: function(node){
+										accum = prompt();
+										$(".op > p").html(accum);
+										command[1] = 'NUMBER';
+									},
+                                    children: [{
+                                        text: {name: 'VARIABLES'}
+                                    }]
+                                }]
+                            }]
+                        }]
+                    }]
+                },{
+                    text: {name: "DATA"}
+                },{
+                    text: {name: "WORKSPACE"},
+					children: [{
+						text: {name: "EXP"},
+						onClick: _onClickEXP
+					}]
+                }]
+            };
+
+			var _commands = {
+				"ADD-RT": function(op, target){
+					if(!('children' in target)){
+						target.children = [];
+					}
+
+					nodeN++;
+					var node = {
+						text: {name: op},
+						HTMLid: "node-" + op + "-" + nodeN,
+						onClick: _onClickWORK
+					};
+
+					if('sig' in _ops[op]){
+						node.children = buildOpChildren(op);
+					}
+
+					target.children.push(node);
+
+					renderTree();
+					clearCommand();
+				},
+				"REPLACE": function(op, target){
+					nodeN++;
+
+					var node = {
+						text: {name: op},
+						HTMLid: "node-" + op + "-" + nodeN,
+						onClick: _onClickWORK
+					};
+
+					if(op == "NUMBER"){
+						node.text.name = accum;
+						node.value = accum;
+					}
+
+					if('sig' in _ops[op]){
+                        node.children = buildOpChildren(op);
+                    }
+
+					replaceNode(nodes, target.HTMLid, node);
+
+					renderTree();
+					clearCommand();
+				},
+				"ERASE": function(op, target){
+					removeNode(nodes, target);
+					renderTree();
+					clearCommand();
+				}
+			};
+
+			var _arith_ops_branch = [" ARITH2", "+", "-", "X", "DIV", "SUMMATION", "FACTORIAL", "EXPONENT", "EQUALS", "LEQ", "LT"];
+
+			var _ops = {
+				"+": {sig: "xx", run: function(a, b){return a + b;}},
+				"-": {sig: "xx", run: function(a, b){return a - b;}},
+				"X": {sig: "xx", run: function(a, b){return a * b;}},
+				"DIV": {sig: "xx", run: function(a, b){return a / b;}},
+				"SUMMATION": {sig: "xx", run: function(a, b){}},
+				"FACTORIAL": {sig: "x", run: function(a, b){}},
+				"EXPONENT": {sig: "xx", run: function(a, b){return a^b;}},
+				"EQUALS": {sig: "xx", run: function(a, b){return a == b;}},
+				"LEQ": {sig: "xx", run: function(a, b){return a <= b;}},
+				"LT": {sig: "xx", run: function(a, b){return a < b;}},
+
+				"NUMBER": {run: function(a, b){return a;}}
+			};
+
+			var nodeN = 0;
+			var accum = 0;
+			var command  = [null, null, null];
+
+			renderTree();
+
+			function removeNode(node, target){
+				if(node.HTMLid == target.HTMLid){
+					return false;
+				}
+
+				if('children' in node){
+                    node.children = node.children.map(function(child){
+                        return removeNode(child, target);
+                    }).filter(function(child){
+						return child;
+					});
+                }
+
+             	return node;
+			}
+
+			function replaceNode(node, targetName, newNode){
+				if(node.HTMLid == targetName){
+					if('children' in node){
+						newNode.children = node.children;
+					}
+					
+					node = newNode;
+				}
+
+			    if('children' in node){
+                    node.children = node.children.map(function(child){
+                        return replaceNode(child, targetName, newNode);
+                    });
+                }
+
+             	return node;
+			}
+
+			function buildOpChildren(op){
+				return _ops[op].sig.split("").map(function(arg){
+					if(arg == "x"){
+						nodeN++;
+						return {
+							text: {name: "NUM-EXP"},
+							HTMLid: "node-NUM-EXP-" + nodeN,
+							onClick: _onClickEXP
+						};
+					}
+				});
+			}
+
+			function _onClickWORK(node){
+				command[2] = node.text.name;
+	
+				if(
+					(command[0] && command[1] && command[2]) ||
+					(command[0] == "ERASE")
+				){
+					//We have a full command, so deal with it...
+					_commands[command[0]](command[1], node);
+				}
+			}
+
+			function _onClickEXP(node){
+				console.log(node);
+				command[2] = node.text.name;
+	
+				if(command[0] && command[1] && command[2]){
+					//We have a full command, so deal with it...
+					_commands[command[0]](command[1], node);
+				}
+			}
+	
+			function _onClickCOMMAND(node){
+				$(".cmd > p").html(node.text.name);
+				command[0] = node.text.name;
+			}
+
+			function clearCommand(){
+				command = [null, null, null];
+				$(".cmd > p").html("");
+				$(".op > p").html("");
+			}
+
+			function buildOpTree(ops){
+				if(ops.length > 8){
+					var opsTree = _buildOpTree(ops.slice(0, 8));
+					opsTree.children.push(_buildOpTree(ops.slice(8, 16)));
+					return opsTree;
+				}
+
+				return _buildOpTree(ops);
+			}
+
+			function _buildOpTree(ops){
+				var node = {}
+
+				if(ops.length > 0){
+					node.text = {name: ops[0]};
+					node.onClick = function(){
+						$(".op > p").html(ops[0]);
+						command[1] = ops[0];
+					};
+			
+					var children = buildOpTree(ops.slice(1, 7));
+
+					if('text' in children){
+						node.children = [children];
+					}
+				}
+
+				return node;
+			}
+
+			function renderTree(){
+				nodes = fixUpNode(nodes);
+	
+				var chart = new Treant({
+					chart: {
+						container: "#tree-simple",
+						connectors: {
+							type: "straight",
+							style: {
+								stroke: "white"
+							}
+						},
+						callback: {
+							onTreeLoaded: function(){
+								bindNode(nodes);
+							}
+						}
+					},
+					nodeStructure: nodes
+				});
+			}
+
+			function bindNode(node){
+				$("#" + node.HTMLid).on("click", function(){
+					$(".status > p").html(node.text.name);
+
+					if('onClick' in node){
+						node.onClick(node);
+					}
+				});
+
+				if('children' in node){
+					node.children.forEach(function(child){
+						bindNode(child);
+					});
+				}
+			}
+
+			function fixUpNode(node){
+				if(!('HTMLid' in node)){
+					node.HTMLid = "node-" + node.text.name;
+				}
+	
+				if('children' in node){
+					node.children = node.children.map(function(child){
+						return fixUpNode(child);
+					});
+				}
+
+				return node;
+			}	
+		</script>
+	</body>
+</html>
