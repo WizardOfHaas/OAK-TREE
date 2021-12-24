@@ -54,6 +54,9 @@
 						onClick: _onClickCOMMAND,
                         children: [{
                             text: {name: "EVALUATE"},
+							onClick: function(node){
+								evaluate(nodes.children[3].children[0]);
+							},
                             children: [{
                                 text: {name: 'KEYBOARD'},
                                 children: [{
@@ -116,6 +119,7 @@
 					nodeN++;
 					var node = {
 						text: {name: op},
+						operation: op,
 						HTMLid: "node-" + op + "-" + nodeN,
 						onClick: _onClickWORK
 					};
@@ -134,6 +138,7 @@
 
 					var node = {
 						text: {name: op},
+						operation: op,
 						HTMLid: "node-" + op + "-" + nodeN,
 						onClick: _onClickWORK
 					};
@@ -181,6 +186,26 @@
 			var command  = [null, null, null];
 
 			renderTree();
+
+			function evaluate(node){
+				console.log(node);
+
+				var val = 0;
+
+				if('children' in node){
+					if(node.children.length == 2){
+						val = _ops[node.operation].run(evaluate(node.children[0]),evaluate(node.children[1]));
+					}else{
+						val = _ops[node.operation].run(evaluate(node.children[0]));
+					}		
+				}else{
+					val = node.value;
+				}
+
+				console.log(node.HTMLid + ": " + val);
+
+				return val;
+			}
 
 			function removeNode(node, target){
 				if(node.HTMLid == target.HTMLid){
