@@ -38,7 +38,9 @@
 		<div class="op"><p></p></div>		
 
 		<div id="tree-simple"></div>
-	
+
+		<div id="result"></div>
+
 		<script src="treant/vendor/raphael.js"></script>
 	    <script src="treant/Treant.js"></script>
 
@@ -55,7 +57,8 @@
                         children: [{
                             text: {name: "EVALUATE"},
 							onClick: function(node){
-								evaluate(nodes.children[3].children[0]);
+								var val = evaluate(nodes.children[3].children[0]);
+								$("#result").html("EVALUATED TO: " + val);
 							},
                             children: [{
                                 text: {name: 'KEYBOARD'},
@@ -83,6 +86,10 @@
 						},
                         children: [{
                             text: {name: "LOGIC2"},
+							onClick: function(){
+								nodes.children[2] = buildOpTree(_logic_ops_branch);
+								renderTree();
+							},
                             children: [{
                                 text: {name: "NAMES2"},
                                 children: [{
@@ -93,7 +100,11 @@
 										command[1] = 'NUMBER';
 									},
                                     children: [{
-                                        text: {name: 'VARIABLES'}
+                                        text: {name: 'VARIABLES'},
+										onClick: function(){
+											nodes.children[2] = buildOpTree(_var_branch);
+											renderTree();
+										}
                                     }]
                                 }]
                             }]
@@ -103,6 +114,7 @@
                     text: {name: "DATA"}
                 },{
                     text: {name: "WORKSPACE"},
+					//children: [{"text":{"name":"A"},"operation":"VARIABLE","HTMLid":"node-A-1","value":"A","children":[{"text":{"name":"8"},"operation":"NUMBER","HTMLid":"node-NUMBER-2","value":"8"}]}]
 					children: [{
 						text: {name: "EXP"},
 						onClick: _onClickEXP
@@ -120,12 +132,18 @@
 					var node = {
 						text: {name: op},
 						operation: op,
-						HTMLid: "node-" + op + "-" + nodeN,
+						HTMLid: "node-" + cleanName(op) + "-" + nodeN,
 						onClick: _onClickWORK
 					};
 
 					if('sig' in _ops[op]){
 						node.children = buildOpChildren(op);
+					}else if(op == "NUMBER"){
+						node.text.name = accum;
+						node.value = accum;
+					}else{ //This is a variable
+						node.operation = "VARIABLE";
+						node.value = op;
 					}
 
 					target.children.push(node);
@@ -139,18 +157,20 @@
 					var node = {
 						text: {name: op},
 						operation: op,
-						HTMLid: "node-" + op + "-" + nodeN,
+						HTMLid: "node-" + cleanName(op) + "-" + nodeN,
 						onClick: _onClickWORK
 					};
 
-					if(op == "NUMBER"){
+
+					if(op in _ops && 'sig' in _ops[op]){ //This is an operation
+                        node.children = buildOpChildren(op);
+                    }else if(op == "NUMBER"){
 						node.text.name = accum;
 						node.value = accum;
+					}else{ //This is a variable
+						node.operation = "VARIABLE";
+						node.value = op;
 					}
-
-					if('sig' in _ops[op]){
-                        node.children = buildOpChildren(op);
-                    }
 
 					replaceNode(nodes, target.HTMLid, node);
 
@@ -164,21 +184,58 @@
 				}
 			};
 
+			var _vars = {};
+			var _var_branch = [" VARIABLES", "A", "B", "C", "D"];
 			var _arith_ops_branch = [" ARITH2", "+", "-", "X", "DIV", "SUMMATION", "FACTORIAL", "EXPONENT", "EQUALS", "LEQ", "LT"];
+			var _logic_ops_branch = [" LOGIC2", "TYPE", "DO", "EVAL", "CONS", "MEM1", "REM1", "AND", "OR", "NOT", "ATOM", "EQUALS", "PROG2", "WHILE", "IF-THEN", "IF-TH-ELSE", "FOR", "=", "Q", "ADL", "CHOP", "FNA", "NAME"];
+
+			var _cleanNames = {
+				"=": "EQUALS",
+				"+": "PLUS"
+			};
 
 			var _ops = {
-				"+": {sig: "xx", run: function(a, b){return a + b;}},
-				"-": {sig: "xx", run: function(a, b){return a - b;}},
-				"X": {sig: "xx", run: function(a, b){return a * b;}},
-				"DIV": {sig: "xx", run: function(a, b){return a / b;}},
-				"SUMMATION": {sig: "xx", run: function(a, b){}},
-				"FACTORIAL": {sig: "x", run: function(a, b){}},
-				"EXPONENT": {sig: "xx", run: function(a, b){return a^b;}},
-				"EQUALS": {sig: "xx", run: function(a, b){return a == b;}},
-				"LEQ": {sig: "xx", run: function(a, b){return a <= b;}},
-				"LT": {sig: "xx", run: function(a, b){return a < b;}},
+				"+": {sig: "xx", run: function(a){return a[0] + a[1];}},
+				"-": {sig: "xx", run: function(a){return a[0] - a[1];}},
+				"X": {sig: "xx", run: function(a){return a[0] * a[1];}},
+				"DIV": {sig: "xx", run: function(a){return a[0] / a[1];}},
+				"SUMMATION": {sig: "xx", run: function(a){}},
+				"FACTORIAL": {sig: "x", run: function(a){}},
+				"EXPONENT": {sig: "xx", run: function(a){return a[0]^a[1];}},
+				"EQUALS": {sig: "xx", run: function(a){return a[0] == a[1];}},
+				"LEQ": {sig: "xx", run: function(a){return a[0] <= a[1];}},
+				"LT": {sig: "xx", run: function(a){return a[0] < a[1];}},
 
-				"NUMBER": {run: function(a, b){return a;}}
+				"TYPE": {sig: "x", run: function(a){console.log(a[0]);}},
+				"DO": {sig: "x", run: function(a){}},
+				"EVAL": {sig: "x", run: function(a){}},
+				"CONS": {sig: "x", run: function(a){}},
+				"MEM1": {sig: "x", run: function(a){}},
+				"REM1": {sig: "x", run: function(a){}},
+				"AND": {sig: "xx", run: function(a){return a[0] && a[1];}},
+				"OR": {sig: "xx", run: function(a){return a[0] || a[1];}},
+				"NOT": {sig: "x", run: function(a){return !a[0];}},
+				"ATOM": {sig: "x", run: function(a){}},
+				"PROG2": {sig: "xx", run: function(a){return a[1];}},
+				"WHILE": {sig: "xx", run: function(a){}},
+				"IF-THEN": {sig: "xx", run: function(a){}},
+				"IF-TH-ELSE": {sig: "xxx", run: function(a){}},
+				"FOR": {sig: "xxxx", run: function(a, node){}},
+				"=": {sig: "xx", run: function(a, node){_vars[node.children[0].value] = a[1];}},
+				"Q": {sig: "x", run: function(a){}},
+				"ADL": {sig: "xx", run: function(a){}},
+				"CHOP": {sig: "x", run: function(a){}},
+				"FNA": {sig: "x", run: function(a){}},
+				"NAME": {sig: "xx", run: function(a){return a[0];}},
+
+				"NUMBER": {run: function(a, node){return node.value;}},
+				"VARIABLE": {run: function(a, node){
+					if(a.length == 1){
+						_vars[node.value] = a[0];
+					}
+
+					return _vars[node.value];
+				}}
 			};
 
 			var nodeN = 0;
@@ -188,16 +245,12 @@
 			renderTree();
 
 			function evaluate(node){
-				console.log(node);
-
 				var val = 0;
 
-				if('children' in node){
-					if(node.children.length == 2){
-						val = _ops[node.operation].run(evaluate(node.children[0]),evaluate(node.children[1]));
-					}else{
-						val = _ops[node.operation].run(evaluate(node.children[0]));
-					}		
+				if('children' in node && node.children.length > 0){
+					val = _ops[node.operation].run(node.children.map(evaluate), node);
+				}else if(node.operation == "VARIABLE"){
+					val = _ops[node.operation].run([], node);
 				}else{
 					val = node.value;
 				}
@@ -288,13 +341,21 @@
 			}
 
 			function buildOpTree(ops){
-				if(ops.length > 8){
+				/*if(ops.length > 8){
 					var opsTree = _buildOpTree(ops.slice(0, 8));
 					opsTree.children.push(_buildOpTree(ops.slice(8, 16)));
 					return opsTree;
 				}
 
-				return _buildOpTree(ops);
+				return _buildOpTree(ops);*/
+
+				var opsTree = _buildOpTree(ops.slice(0, 8));
+
+				for(var i = 8; i < ops.length; i += 8){
+					opsTree.children.push(_buildOpTree(ops.slice(i, i + 8)));
+				}
+
+				return opsTree;
 			}
 
 			function _buildOpTree(ops){
@@ -357,7 +418,7 @@
 
 			function fixUpNode(node){
 				if(!('HTMLid' in node)){
-					node.HTMLid = "node-" + node.text.name;
+					node.HTMLid = "node-" + cleanName(node.text.name);
 				}
 	
 				if('children' in node){
@@ -367,7 +428,15 @@
 				}
 
 				return node;
-			}	
+			}
+
+			function cleanName(name){
+				if(name in _cleanNames){
+					return _cleanNames[name];
+				}else{
+					return name;
+				}
+			}
 		</script>
 	</body>
 </html>
