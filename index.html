@@ -7,6 +7,7 @@
 		<style>
 			#tree-simple{
 				background-color: black;
+                width: 1024px;
 			}
 
 			p{
@@ -17,14 +18,14 @@
 				position: absolute;
 				z-index: 100;
 				top: 20px;
-				left: 800px;
+				left: 600px;
 			}
 
 			.op{
 				position: absolute;
 				z-index: 100;
 				top: 20px;
-				left: 900px;
+				left: 700px;
 			}
 
 			div[id^='node-']{
@@ -45,6 +46,7 @@
 	    <script src="treant/Treant.js"></script>
 
 		<script>
+            //https://sci-hub.se/10.1145/1463891.1463940
 			var nodes = {
                 text: {name: "OAK-TREE"},
 				onClick: function(){
@@ -57,8 +59,10 @@
                         children: [{
                             text: {name: "EVALUATE"},
 							onClick: function(node){
+                                _vars = {};
+                                $("#result").html("");
 								var val = evaluate(nodes.children[3].children[0]);
-								$("#result").html("EVALUATED TO: " + val);
+								$("#result").append("EVALUATED TO: " + val + "</br>");
 							},
                             children: [{
                                 text: {name: 'KEYBOARD'},
@@ -92,6 +96,14 @@
 							},
                             children: [{
                                 text: {name: "NAMES2"},
+                                onClick: function(){
+									nodes.children[2] = buildOpTree(_names_branch, function(node){
+                                        $(".op > p").html(node.text.name);
+                                        selectedName = node.text.name;
+						                command[1] = "NAMES2";
+                                    });
+									renderTree();
+								},
                                 children: [{
                                     text: {name: 'NUMBERS'},
 									onClick: function(node){
@@ -114,11 +126,10 @@
                     text: {name: "DATA"}
                 },{
                     text: {name: "WORKSPACE"},
-					children: [{"text":{"name":"FOR"},"operation":"FOR","HTMLid":"node-FOR-1","children":[{"text":{"name":"A"},"operation":"VARIABLE","HTMLid":"node-A-6","value":"A"},{"text":{"name":"1"},"operation":"NUMBER","HTMLid":"node-NUMBER-7","value":"1"},{"text":{"name":"10"},"operation":"NUMBER","HTMLid":"node-NUMBER-8","value":"10"},{"text":{"name":"TYPE"},"operation":"TYPE","HTMLid":"node-TYPE-9","children":[{"text":{"name":"A"},"operation":"VARIABLE","HTMLid":"node-A-11","value":"A"}]}]}]
-					/*children: [{
+					children: [{
 						text: {name: "EXP"},
 						onClick: _onClickEXP
-					}]*/
+					}]
                 }]
             };
 
@@ -141,7 +152,10 @@
 					}else if(op == "NUMBER"){
 						node.text.name = accum;
 						node.value = parseInt(accum);
-					}else{ //This is a variable
+					}else if(op == "NAMES2"){
+                        node = _storedNames[selectedName];
+                        console.log(node);
+                    }else{ //This is a variable
 						node.operation = "VARIABLE";
 						node.value = op;
 					}
@@ -167,7 +181,10 @@
                     }else if(op == "NUMBER"){
 						node.text.name = accum;
 						node.value = accum;
-					}else{ //This is a variable
+					}else if(op == "NAMES2"){
+                        node = _storedNames[selectedName];
+                        console.log(node);
+                    }else{ //This is a variable
 						node.operation = "VARIABLE";
 						node.value = op;
 					}
@@ -186,6 +203,7 @@
 
 			var _vars = {};
 			var _var_branch = [" VARIABLES", "A", "B", "C", "D"];
+            var _names_branch = [" NAMES2", "TEST"];
 			var _num_ops_branch = [" NUMBERS", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 			var _arith_ops_branch = [" ARITH2", "+", "-", "X", "DIV", "SUMMATION", "FACTORIAL", "EXPONENT", "EQUALS", "LEQ", "LT"];
 			var _logic_ops_branch = [" LOGIC2", "TYPE", "DO", "EVAL", "CONS", "MEM1", "REM1", "AND", "OR", "NOT", "ATOM", "EQUALS", "PROG2", "WHILE", "IF-THEN", "IF-TH-ELSE", "FOR", "=", "Q", "ADL", "CHOP", "FNA", "NAME"];
@@ -195,6 +213,10 @@
 				"+": "PLUS"
 			};
 
+            var _storedNames = {
+                "TEST": {"text":{"name":"DO"},"operation":"DO","HTMLid":"node-DO-1","children":[{"text":{"name":"="},"operation":"=","HTMLid":"node-EQUALS-3","children":[{"text":{"name":"B"},"operation":"VARIABLE","HTMLid":"node-B-6","value":"B"},{"text":{"name":"CONS"},"operation":"CONS","HTMLid":"node-CONS-7","children":[{"text":{"name":"NUM-EXP"},"HTMLid":"node-EXP-8"},{"text":{"name":"NUM-EXP"},"HTMLid":"node-EXP-9"}]}]},{"text":{"name":"FOR"},"operation":"FOR","HTMLid":"node-FOR-10","children":[{"text":{"name":"A"},"operation":"VARIABLE","HTMLid":"node-A-15","value":"A"},{"text":{"name":"1"},"operation":"NUMBER","HTMLid":"node-NUMBER-16","value":"1"},{"text":{"name":"10"},"operation":"NUMBER","HTMLid":"node-NUMBER-17","value":"10"},{"text":{"name":"ADL"},"operation":"ADL","HTMLid":"node-ADL-18","children":[{"text":{"name":"A"},"operation":"VARIABLE","HTMLid":"node-A-21","value":"A"},{"text":{"name":"B"},"operation":"VARIABLE","HTMLid":"node-B-22","value":"B"}]}]}]}
+            };
+
 			var _ops = {
 				"+": {sig: "xx", run: function(a){return parseInt(a[0]) + parseInt(a[1]);}},
 				"-": {sig: "xx", run: function(a){return a[0] - a[1];}},
@@ -202,12 +224,12 @@
 				"DIV": {sig: "xx", run: function(a){return a[0] / a[1];}},
 				"SUMMATION": {sig: "xx", run: function(a){}},
 				"FACTORIAL": {sig: "x", run: function(a){}},
-				"EXPONENT": {sig: "xx", run: function(a){return a[0]^a[1];}},
+				"EXPONENT": {sig: "xx", run: function(a){return a[0] ** a[1];}},
 				"EQUALS": {sig: "xx", run: function(a){return a[0] == a[1];}},
 				"LEQ": {sig: "xx", run: function(a){return a[0] <= a[1];}},
 				"LT": {sig: "xx", run: function(a){return a[0] < a[1];}},
 
-				"TYPE": {sig: "x", run: function(a){console.log(a[0]);}},
+				"TYPE": {sig: "x", run: function(a){type(a[0]);}},
 				"DO": {sig: "x", run: function(a){}},
 				"EVAL": {sig: "x", run: function(a){}}, //<-- This evaluates LISP-like expressions
 				"CONS": {sig: "xx", run: function(a){return a;}}, //<-- Just like cons in LISP
@@ -218,7 +240,11 @@
 				"NOT": {sig: "x", run: function(a){return !a[0];}},
 				"ATOM": {sig: "x", run: function(a){return Array.isArray(a[0]);}},
 				"PROG2": {sig: "xx", run: function(a){return a[1];}},
-				"WHILE": {sig: "xx", run: function(a){}},
+				"WHILE": {sig: "xx", flowControl: true, run: function(a){
+                    while(evaluate(a[0])){
+                        evaluate(a[1]);
+                    }
+                }},
 				"IF-THEN": {sig: "xx", flowControl: true, run: function(a, node){
                     if(evaluate(a[0])){
                         evaluate(a[1]);
@@ -238,7 +264,15 @@
                 }},
 				"=": {sig: "vx", run: function(a, node){_vars[node.children[0].value] = a[1];}},
 				"Q": {sig: "x", run: function(a){return String(a[0]);}},
-				"ADL": {sig: "xx", run: function(a){}},
+				"ADL": {sig: "xx", run: function(a, node){
+                    if(node.children[1].value in _vars && !Array.isArray(_vars[node.children[1].value])){
+                        _vars[node.children[1].value] = [_vars[node.children[1].value]];
+                    }else if(!(node.children[1].value in _vars)){
+                        _vars[node.children[1].value] = [];
+                    }
+
+                    _vars[node.children[1].value].push(a[0]);
+                }},
 				"CHOP": {sig: "l", run: function(a){return _vars[node.children[0].value].pop();}},
 				"FNA": {sig: "x", run: function(a){}},
 				"NAME": {sig: "xx", run: function(a){return a[0];}},
@@ -255,6 +289,7 @@
 
 			var nodeN = 0;
 			var accum = 0;
+            var selectedName = "";
 			var command  = [null, null, null];
 
 			renderTree();
@@ -278,6 +313,10 @@
 
 				return val;
 			}
+
+            function type(s){
+                $("#result").append(s + "</br>");
+            }
 
 			function removeNode(node, target){
 				if(node.HTMLid == target.HTMLid){
@@ -318,6 +357,7 @@
                     nodeN++;
 				    var node = {
 						text: {name: "NUM-EXP"},
+                        operation: "TBD",
 						HTMLid: "node-EXP-" + nodeN,
 						onClick: _onClickEXP
 					};
@@ -345,7 +385,6 @@
 			}
 
 			function _onClickEXP(node){
-				console.log(node);
 				command[2] = node.text.name;
 	
 				if(command[0] && command[1] && command[2]){
@@ -365,27 +404,32 @@
 				$(".op > p").html("");
 			}
 
-			function buildOpTree(ops){
-				var opsTree = _buildOpTree(ops.slice(0, 8));
+			function buildOpTree(ops, onClick){
+				var opsTree = _buildOpTree(ops.slice(0, 8), onClick);
 
 				for(var i = 7; i < ops.length; i += 7){
-					opsTree.children.push(_buildOpTree(ops.slice(i, i + 7)));
+					opsTree.children.push(_buildOpTree(ops.slice(i, i + 7), onClick));
 				}
 
 				return opsTree;
 			}
 
-			function _buildOpTree(ops){
+			function _buildOpTree(ops, onClick){
 				var node = {}
 
 				if(ops.length > 0){
 					node.text = {name: ops[0]};
-					node.onClick = function(){
-						$(".op > p").html(ops[0]);
-						command[1] = ops[0];
-					};
+
+                    if(onClick){
+                        node.onClick = onClick;
+                    }else{
+					    node.onClick = function(node){
+						    $(".op > p").html(ops[0]);
+						    command[1] = ops[0];
+					    };
+                    }
 			
-					var children = buildOpTree(ops.slice(1, 7));
+					var children = buildOpTree(ops.slice(1, 7), onClick);
 
 					if('text' in children){
 						node.children = [children];
@@ -437,8 +481,12 @@
 				if(!('HTMLid' in node)){
 					node.HTMLid = "node-" + cleanName(node.text.name);
 				}
+                
+                if('operation' in node && !('onClick' in node)){
+                    node.onClick = _onClickWORK;
+                }
 	
-				if('children' in node){
+    			if('children' in node){
 					node.children = node.children.map(function(child){
 						return fixUpNode(child);
 					});
