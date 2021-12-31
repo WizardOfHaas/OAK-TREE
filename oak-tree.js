@@ -10,6 +10,8 @@
          * Tree traget
          * Type target
          */
+        var self = this;
+
         this.config = config;
 
         this.tree = {};
@@ -18,6 +20,7 @@
 
         this._arith_ops = ["+", "-", "X", "DIV", "SUMMATION", "FACTORIAL", "EXPONENT", "EQUALS", "LEQ", "LT"];
         this._logic_ops = ["TYPE", "DO", "EVAL", "CONS", "MEM1", "REM1", "AND", "OR", "NOT", "ATOM", "EQUALS", "PROG2", "WHILE", "IF-THEN", "IF-TH-ELSE", "FOR", "=", "Q", "ADL", "CHOP", "FNA", "NAME"];
+        this._var_list = ["A", "B", "C", "D"];
 
         this._vars = {};
         this._ops = {
@@ -32,7 +35,7 @@
             "LEQ": {sig: "xx", run: function(a){return a[0] <= a[1];}},
             "LT": {sig: "xx", run: function(a){return a[0] < a[1];}},
 
-            "TYPE": {sig: "x", run: function(a){type(a[0]);}},
+            "TYPE": {sig: "x", run: function(a){self.type(a[0]);}},
             "DO": {sig: "x", run: function(a){}},
             "EVAL": {sig: "x", run: function(a){}}, //<-- This evaluates LISP-like expressions
             "CONS": {sig: "xx", run: function(a){return a;}}, //<-- Just like cons in LISP
@@ -44,49 +47,49 @@
             "ATOM": {sig: "x", run: function(a){return Array.isArray(a[0]);}},
             "PROG2": {sig: "xx", run: function(a){return a[1];}},
             "WHILE": {sig: "xx", flowControl: true, run: function(a){
-                while(evaluate(a[0])){
-                    evaluate(a[1]);
+                while(self.evaluate(a[0], self)){
+                    self.evaluate(a[1], self);
                 }
             }},
             "IF-THEN": {sig: "xx", flowControl: true, run: function(a, node){
-                if(evaluate(a[0])){
-                    evaluate(a[1]);
+                if(self.evaluate(a[0], self)){
+                    self.evaluate(a[1], self);
                 }
             }},
             "IF-TH-ELSE": {sig: "xxx", flowControl: true, run: function(a){
-                if(evaluate(a[0])){
-                    evaluate(a[1]);
+                if(self.evaluate(a[0], self)){
+                    self.evaluate(a[1], self);
                 }else{
-                    evaluate(a[2]);
+                    self.evaluate(a[2], self);
                 }
             }},
             "FOR": {sig: "vxxx", flowControl: true, run: function(a, node){
-                for(_vars[node.children[0].value] = evaluate(a[1]); _vars[node.children[0].value] <= evaluate(a[2]); _vars[node.children[0].value]++){
-                    evaluate(a[3]);
+                for(self._vars[node.children[0].value] = self.evaluate(a[1], self); self._vars[node.children[0].value] <= self.evaluate(a[2], self); self._vars[node.children[0].value]++){
+                    self.evaluate(a[3], self);
                 }
             }},
-            "=": {sig: "vx", run: function(a, node){_vars[node.children[0].value] = a[1];}},
+            "=": {sig: "vx", run: function(a, node){self._vars[node.children[0].value] = a[1];}},
             "Q": {sig: "x", run: function(a){return String(a[0]);}},
             "ADL": {sig: "xx", run: function(a, node){
-                if(node.children[1].value in _vars && !Array.isArray(_vars[node.children[1].value])){
-                    _vars[node.children[1].value] = [_vars[node.children[1].value]];
-                }else if(!(node.children[1].value in _vars)){
-                    _vars[node.children[1].value] = [];
+                if(node.children[1].value in self._vars && !Array.isArray(self._vars[node.children[1].value])){
+                    self._vars[node.children[1].value] = [self._vars[node.children[1].value]];
+                }else if(!(node.children[1].value in self._vars)){
+                    self._vars[node.children[1].value] = [];
                 }
 
-                _vars[node.children[1].value].push(a[0]);
+                self._vars[node.children[1].value].push(a[0]);
             }},
-            "CHOP": {sig: "l", run: function(a){return _vars[node.children[0].value].pop();}},
+            "CHOP": {sig: "l", run: function(a){return self._vars[node.children[0].value].pop();}},
             "FNA": {sig: "x", run: function(a){}},
             "NAME": {sig: "xx", run: function(a){return a[0];}},
 
             "NUMBER": {run: function(a, node){return node.value;}},
             "VARIABLE": {run: function(a, node){
                 if(a.length == 1){
-                    _vars[node.value] = a[0];
+                    self._vars[node.value] = a[0];
                 }
 
-                return _vars[node.value];
+                return self._vars[node.value];
             }}
         };
 
@@ -98,18 +101,23 @@
         return this;
     }
 
-    OakTree.prototype.evaluate = function(node){
-        var self = this;
+    OakTree.prototype.runTree = function(){
+        return this.evaluate(this.tree.children[0], this);
+    }
+
+    OakTree.prototype.evaluate = function(node, self){
         var val = 0;
 
         if('children' in node && node.children.length > 0){
-            if(_ops[node.operation].flowControl){
-                val = _ops[node.operation].run(node.children, node);
+            if(self._ops[node.operation].flowControl){
+                val = self._ops[node.operation].run(node.children, node);
             }else{
-                val = _ops[node.operation].run(node.children.map(self.evaluate), node);
+                val = self._ops[node.operation].run(node.children.map(function(n){
+                    return self.evaluate(n, self);
+                }), node);
             }
         }else if(node.operation == "VARIABLE"){
-            val = _ops[node.operation].run([], node);
+            val = self._ops[node.operation].run([], node);
         }else{
             val = node.value;
         }
@@ -168,13 +176,15 @@
     }
 
     OakTree.prototype.removeNode = function(node, target){
+        var self = this;
+
         if(node.HTMLid == target.HTMLid){
             return false;
         }
 
         if('children' in node){
             node.children = node.children.map(function(child){
-                return this.removeNode(child, target);
+                return self.removeNode(child, target);
             }).filter(function(child){
                 return child;
             });
@@ -185,7 +195,7 @@
 
     OakTree.prototype.replaceNode = function(node, targetName, newNode){
         var self = this;
-        
+
         if(node.HTMLid == targetName){
             if('children' in node){
                 newNode.children = node.children;

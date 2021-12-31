@@ -8,26 +8,41 @@
 			#tree-simple, .left-menu, .right-menu{
 				background-color: black;
                 color: white;
-                height: 500px;
+                height: 800px;
                 cursor: crosshair;
 			}
 
-			p{
+			p, td, li{
 				color: white;
+                font-family: monospace;
 			}
+
+            td{
+                padding-right: 20px;
+                padding-bottom: 20px;
+                padding-left: 0px;
+            }
+
+            table{
+                margin-top: 20px;
+            }
+
+            .compose-table{
+                display: none;
+            }
 
 			.cmd{
 				position: absolute;
 				z-index: 100;
-				top: 450px;
-				left: 400px;
+                top: 20;
+				left: 40%;
 			}
 
 			.op{
 				position: absolute;
 				z-index: 100;
-				top: 450px;
-				left: 500px;
+                top: 20;
+				left: 48%;
 			}
 
 			div[id^='node-']{
@@ -42,8 +57,7 @@
 
             .bottom-menu{
                 position: absolute;
-                bottom: 0;
-                left: 0;
+                bottom: 10;
             }
 		</style>
 	</head>
@@ -62,12 +76,39 @@
                         <li>ADD-DWN</li>
                         <li>CV</li>
                     </ul>
+
+                    <ul id="run-menu" class="bottom-menu">
+                        <li id="evaluate">EVALUATE</li>
+                    </ul>
                 </div>
+
                 <div class="col-sm-8" id="tree-simple"></div>
+
                 <div class="col-sm-2 right-menu">
                     <ul id="op-menu">
 
                     </ul>
+
+                    <table class="compose-table">
+                        <tr><td>A</td><td>B</td><td>C</td></tr>
+                        <tr><td>D</td><td>E</td><td>F</td></tr>
+                        <tr><td>G</td><td>H</td><td>I</td></tr>
+                        <tr><td>J</td><td>K</td><td>L</td></tr>
+                        <tr><td>M</td><td>N</td><td>O</td></tr>
+                        <tr><td>P</td><td>Q</td><td>R</td></tr>
+                        <tr><td>S</td><td>T</td><td>U</td></tr>
+                        <tr><td>V</td><td>W</td><td>X</td></tr>
+                        <tr><td>Y</td><td>Z</td></tr>
+                    </table>
+
+                    </br>
+
+                    <table class="compose-table">
+                        <tr><td>1</td><td>2</td><td>3</td></tr>
+                        <tr><td>4</td><td>5</td><td>6</td></tr>
+                        <tr><td>7</td><td>8</td><td>9</td></tr>
+                        <tr><td>0</td></tr>
+                    </table>
 
                     <ul id="class-menu" class="bottom-menu">
                         <li>LOGIC</li>
@@ -79,16 +120,16 @@
                         <li>FUNCTIONS</li>
                     </ul>
                 </div>
+
+                <div class="cmd"><p>START</p></div>
+                <div class="op"><p></p></div>
+            </div>
+
+            <div class="row">
+                    <div class="col-md-12" id="result"></div>
             </div>
         </div>
-
-		<div class="row">
-            <div class="cmd col-md-6"><p>START</p></div>
-            <div class="op col-md-6"><p></p></div>
-        </div>
         
-        <div id="result"></div>
-
 		<script src="treant/vendor/raphael.js"></script>
 	    <script src="treant/Treant.js"></script>
 	    <script src="oak-tree.js"></script>
@@ -121,29 +162,49 @@
                 }
             });
 
+            var _storedNames = {
+                "TEST": {"text":{"name":"DO"},"operation":"DO","HTMLid":"node-DO-1","children":[{"text":{"name":"FOR"},"operation":"FOR","HTMLid":"node-FOR-2","children":[{"text":{"name":"A"},"operation":"VARIABLE","HTMLid":"node-A-4","value":"A"},{"text":{"name":"0"},"operation":"LITERAL","HTMLid":"node-LITERAL-6","value":"0"},{"text":{"name":"10"},"operation":"LITERAL","HTMLid":"node-LITERAL-7","value":"10"},{"text":{"name":"ADL"},"operation":"ADL","HTMLid":"node-ADL-8","children":[{"text":{"name":"EXPONENT"},"operation":"EXPONENT","HTMLid":"node-EXPONENT-10","children":[{"text":{"name":"2"},"operation":"LITERAL","HTMLid":"node-LITERAL-11","value":"2"},{"text":{"name":"A"},"operation":"VARIABLE","HTMLid":"node-A-12","value":"A"}]},{"text":{"name":"B"},"operation":"VARIABLE","HTMLid":"node-B-9","value":"B"}]}]},{"text":{"name":"TYPE"},"operation":"TYPE","HTMLid":"node-TYPE-3","children":[{"text":{"name":"B"},"operation":"VARIABLE","HTMLid":"node-B-5","value":"B"}]}]}
+            };
+
             oak.tree = {
                 text: {name: "OAK"},
-                children: [{
-                    text: {name: "EXP"}
-                }]
+                children: [{text: {name: "EXP"}}]
+                //children: [_storedNames['TEST']]
             };
 
             oak.renderTree();
 
             var command = [null, null, null];
+            var selectedName = "";
             var accum = "";
 
             $("#class-menu > li").on('click', function(){
                 var opClass = $(this).html();
+                $(".compose-table").hide();
 
                 if(opClass == "ARITHMATIC"){
                     showOpsMenu(oak._arith_ops);
                 }else if(opClass == "LOGIC"){
                     showOpsMenu(oak._logic_ops);
                 }else if(opClass == "COMPOSE"){
-                    accum = prompt("ay?");
-                    $(".op > p").html(command[1]);
+                    $("#op-menu").html("");
+                    $(".compose-table").show();
+                    accum = "";
+                    command[1] = "LITERAL";
+                }else if(opClass == "VARIABLES"){
+                    showOpsMenu(oak._var_list);
+                }else if(opClass == "STORAGE"){
+                    command[1] = "STORAGE";
+                    showOpsMenu(Object.keys(_storedNames), function(){
+                        selectedName = $(this).html();
+                        $(".op > p").html(selectedName);
+                    });
                 }
+            });
+
+            $(".compose-table td").on('click', function(){
+                accum += $(this).html();
+                $(".op > p").html(accum);
             });
 
             $("#cmd-menu > li").on('click', function(){
@@ -151,104 +212,26 @@
                 $(".cmd > p").html(command[0]);
             });
 
-            function showOpsMenu(ops){
+            $("#evaluate").on('click', function(){
+                oak.runTree();
+            });
+
+            function showOpsMenu(ops, onClick){
                 $("#op-menu").html("");
 
                 ops.forEach(function(op){
                     $("#op-menu").append("<li>" + op + "</li>");
                 });
 
-                $("#op-menu > li").on('click', function(){
-                    command[1] = $(this).html();
-                    $(".op > p").html(command[1]);
-                });
+                if(onClick){
+                    $("#op-menu > li").on('click', onClick);
+                }else{
+                    $("#op-menu > li").on('click', function(){
+                        command[1] = $(this).html();
+                        $(".op > p").html(command[1]);
+                    });
+                }
             }
-
-			/*var nodes = {
-                text: {name: "OAK-TREE"},
-				onClick: function(){
-				},
-                children: [{
-                    text: {name: "COMMANDS"},
-                    children: [{
-                        text: {name: "REPLACE"},
-						onClick: _onClickCOMMAND,
-                        children: [{
-                            text: {name: "EVALUATE"},
-							onClick: function(node){
-                                _vars = {};
-                                $("#result").html("");
-								var val = evaluate(nodes.children[3].children[0]);
-								$("#result").append("EVALUATED TO: " + val + "</br>");
-							},
-                            children: [{
-                                text: {name: 'KEYBOARD'},
-                                children: [{
-                                    text: {name: 'STORE'},
-                                    children: [{
-                                        text: {name: 'ADD-RT'},
-										onClick: _onClickCOMMAND, 
-                                        children: [{
-                                            text: {name: 'ERASE'},
-											onClick: _onClickCOMMAND
-                                        }]
-                                    }]
-                                }]
-                            }]
-                        	}]
-                    }]
-                },{
-                    text: {name: "CLASS"},
-                    children: [{
-                        text: {name: "ARITH2"},
-						onClick: function(){
-							nodes.children[2] = buildOpTree(_arith_ops_branch);
-							renderTree();
-						},
-                        children: [{
-                            text: {name: "LOGIC2"},
-							onClick: function(){
-								nodes.children[2] = buildOpTree(_logic_ops_branch);
-								renderTree();
-							},
-                            children: [{
-                                text: {name: "NAMES2"},
-                                onClick: function(){
-									nodes.children[2] = buildOpTree(_names_branch, function(node){
-                                        $(".op > p").html(node.text.name);
-                                        selectedName = node.text.name;
-						                command[1] = "NAMES2";
-                                    });
-									renderTree();
-								},
-                                children: [{
-                                    text: {name: 'NUMBERS'},
-									onClick: function(node){
-										accum = prompt();
-										$(".op > p").html(accum);
-										command[1] = 'NUMBER';
-									},
-                                    children: [{
-                                        text: {name: 'VARIABLES'},
-										onClick: function(){
-											nodes.children[2] = buildOpTree(_var_branch);
-											renderTree();
-										}
-                                    }]
-                                }]
-                            }]
-                        }]
-                    }]
-                },{
-                    text: {name: "DATA"}
-                },{
-                    text: {name: "WORKSPACE"},
-					children: [{
-						text: {name: "EXP"},
-						onClick: _onClickEXP
-					}]
-                }]
-            };*/
 
 			var _commands = {
 				"ADD-RT": function(op, target){
@@ -263,14 +246,13 @@
 						HTMLid: "node-" + oak.cleanName(op) + "-" + nodeN
 					};
 
-					if('sig' in _ops[op]){
-						node.children = buildOpChildren(op);
-					}else if(op == "NUMBER"){
+					if(op in oak._ops && 'sig' in oak._ops[op]){ //This is an operation
+                        node.children = oak.buildOpChildren(op);
+                    }else if(op == "LITERAL"){
 						node.text.name = accum;
-						node.value = parseInt(accum);
-					}else if(op == "NAMES2"){
+						node.value = accum;
+					}else if(op == "STORAGE"){
                         node = _storedNames[selectedName];
-                        console.log(node);
                     }else{ //This is a variable
 						node.operation = "VARIABLE";
 						node.value = op;
@@ -278,7 +260,7 @@
 
 					target.children.push(node);
 
-					renderTree();
+					oak.renderTree();
 					clearCommand();
 				},
 				"REPLACE": function(op, target){
@@ -290,13 +272,12 @@
 						HTMLid: "node-" + oak.cleanName(op) + "-" + nodeN
 					};
 
-
 					if(op in oak._ops && 'sig' in oak._ops[op]){ //This is an operation
                         node.children = oak.buildOpChildren(op);
-                    }else if(op == "NUMBER"){
+                    }else if(op == "LITERAL"){
 						node.text.name = accum;
 						node.value = accum;
-					}else if(op == "NAMES2"){
+					}else if(op == "STORAGE"){
                         node = _storedNames[selectedName];
                     }else{ //This is a variable
 						node.operation = "VARIABLE";
